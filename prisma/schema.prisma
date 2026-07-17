@@ -1,0 +1,128 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                 String   @id @default(cuid())
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  name               String
+  email              String   @unique
+  phone              String?  @default("")
+  address            String?  @default("")
+  businessName       String?  @default("")
+  occupation         String?  @default("")
+
+  // Email verification for further site management functions
+  isEmailVerified    Boolean  @default(false)
+  verificationToken  String?  @unique
+  verificationSentAt DateTime?
+
+  submissions        WebsiteSubmission[]
+}
+
+model WebsiteSubmission {
+  id                    String   @id @default(cuid())
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Associated user account
+  userId                String?
+  user                  User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Step 1 — Business Basics
+  business_name         String
+  contact_name          String
+  phone_number          String
+  email_address         String
+  business_address      String?  @default("")
+  service_area          String?  @default("")
+  occupation            String
+  years_in_business     String?  @default("")
+
+  // Step 2 — Services
+  main_services         String
+  specialities          String?  @default("")
+  price_list            String?  @default("")
+  top_services_to_promote String? @default("")
+  emergency_service     Boolean  @default(false)
+  main_cta              String   @default("call")
+
+  // Step 3 — Trust & Credibility
+  differentiator        String?  @default("")
+  qualifications        String?  @default("")
+  insurance             Boolean  @default(false)
+  memberships           String?  @default("")
+  specialist_tools      String?  @default("")
+  testimonials          String?  @default("")
+  notable_work          String?  @default("")
+  guarantees            String?  @default("")
+
+  // Step 4 — Brand & Style
+  style_preference      String[]
+  preferred_colours     String?  @default("")
+  selected_website_look String   @default("professional-blue")
+  match_logo_colours    Boolean  @default(false)
+  logo_uploaded         Boolean  @default(false)
+  logo_data_url         String?  @default("")
+  logo_prompt           String?  @default("")
+  photos_uploaded       Boolean  @default(false)
+  uploaded_photos_urls  String[] @default([])
+  example_websites      String?  @default("")
+  avoid_on_site         String?  @default("")
+
+  // Step 5 — SEO & Location
+  main_city             String
+  full_service_area     String?  @default("")
+  priority_locations    String?  @default("")
+  seo_keywords          String?  @default("")
+  service_pages         Boolean  @default(true)
+  location_pages        Boolean  @default(true)
+
+  // Step 6 — Conversion Details
+  contact_number_to_show String? @default("")
+  contact_email_to_show  String? @default("")
+  contact_form           Boolean  @default(true)
+  google_maps            Boolean  @default(true)
+  testimonials_on_site   Boolean  @default(true)
+  quote_request_form     Boolean  @default(true)
+  booking_or_whatsapp    String   @default("none")
+
+  // Step 7 — Add-ons & Final Details
+  google_listing_option  Boolean  @default(false)
+  branded_domain_option  Boolean  @default(false)
+  additional_notes       String?  @default("")
+  seasonal_offers        String?  @default("")
+  competitors            String?  @default("")
+  avoid_wording          String?  @default("")
+
+  // Preview generated association
+  previewId              String?  @default("")
+  // AI-generated website HTML — stored for serving the preview iframe
+  generatedHtml          String?  @default("")
+  // Live Dynamic Route Slug
+  slug                   String?  @unique
+
+  // Queue & Generation Status Tracking
+  status                 String   @default("pending") // 'pending' | 'processing' | 'completed' | 'failed'
+  generationAttempts     Int      @default(0)
+  lastAttemptAt          DateTime?
+  errorMessage           String?  @default("")
+}
+
+model ContactSubmission {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  firstName String
+  lastName  String
+  email     String
+  phone     String?
+  message   String
+}
