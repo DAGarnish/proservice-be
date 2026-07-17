@@ -4,10 +4,25 @@ const globalForPrisma = globalThis as unknown as {
   prisma: any;
 };
 
+// Ensure Neon PgBouncer connection string includes pgbouncer=true and sensible timeouts
+function getOptimizedDatabaseUrl(): string | undefined {
+  let url = process.env.DATABASE_URL;
+  if (!url) return undefined;
+  if (url.includes('neon.tech') || url.includes('-pooler')) {
+    if (!url.includes('pgbouncer=true')) {
+      url += (url.includes('?') ? '&' : '?') + 'pgbouncer=true&connect_timeout=15';
+    }
+  }
+  return url;
+}
+
+const dbUrl = getOptimizedDatabaseUrl();
+
 export const prisma: any =
   globalForPrisma.prisma ??
   new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+    datasources: dbUrl ? { db: { url: dbUrl } } : undefined,
+    log: process.env.NODE_ENV === 'development' ? ['query', 'warn'] : ['warn'],
   });
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
@@ -35,7 +50,10 @@ export async function withPrismaRetry<T = any>(fn: () => Promise<T>, retries = 3
         msg.includes('08001'); // client unable to establish connection
 
       if (isConnectionError && i < retries) {
-        console.warn(`[PRISMA] Database connection dropped or sleeping (${msg}). Reconnecting & retrying (${i + 1}/${retries})...`);
+        // Quietly reconnect without polluting error logs with red stacktraces
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(`[PRISMA] Database connection sleeping (${msg}). Reconnecting & retrying (${i + 1}/${retries})...`);
+        }
         try {
           await prisma.$disconnect();
         } catch (e) {
@@ -49,3 +67,4 @@ export async function withPrismaRetry<T = any>(fn: () => Promise<T>, retries = 3
   }
   throw new Error('Prisma retry failed');
 }
+
