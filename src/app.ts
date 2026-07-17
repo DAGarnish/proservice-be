@@ -10,9 +10,19 @@ const app: Application = express();
 
 // Security Middlewares
 app.use(helmet());
+
+const allowedOrigins = config.clientUrl.split(',').map((url) => url.trim());
 app.use(
   cors({
-    origin: config.clientUrl,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like server-to-server Vercel API fetch, mobile apps, curl)
+      if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+        callback(null, true);
+      } else {
+        console.warn(`[CORS] Blocked request from unauthorized origin: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   })
 );
