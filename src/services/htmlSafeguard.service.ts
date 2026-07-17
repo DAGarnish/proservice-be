@@ -68,14 +68,14 @@ export function enhanceGeneratedHtml(
     if ((!hasUploadedPhoto || photoUrls.length > 1) && !modified.includes('ai-safeguard-gallery')) {
       const galleryHtml = `
 <!-- AI Safeguard: Uploaded Business Photos Gallery -->
-<section class="ai-safeguard-gallery" id="gallery" style="padding: 4rem 1.5rem; background: #f8fafc; text-align: center;">
-  <div style="max-width: 1100px; margin: 0 auto;">
-    <h2 style="font-size: 2.2rem; font-weight: 700; margin-bottom: 0.5rem; color: #0f172a;">Our Work &amp; Portfolio Gallery</h2>
-    <p style="color: #4b5563; margin-bottom: 2.5rem; font-size: 1.1rem;">Take a look at our recent projects, equipment, and professional standards.</p>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+<section class="ai-safeguard-gallery" id="gallery" style="padding: 4.5rem 1.5rem; background: #f8fafc; text-align: center;">
+  <div style="max-width: 1150px; margin: 0 auto;">
+    <h2 style="font-size: 2.3rem; font-weight: 800; margin-bottom: 0.6rem; color: #0f172a;">Our Work &amp; Portfolio Gallery</h2>
+    <p style="color: #4b5563; margin-bottom: 3rem; font-size: 1.15rem;">Take a look at our recent projects, equipment, and professional standards.</p>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.75rem; align-items: stretch;">
       ${photoUrls.map((url, i) => `
-        <div style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.08); min-height: 240px; background: #1e293b; display: flex; align-items: center; justify-content: center; padding: 12px;">
-          <img src="${url}" alt="${bName} photo ${i + 1}" style="max-width: 100%; max-height: 300px; width: auto; height: auto; object-fit: contain !important; object-position: center; transition: transform 0.3s ease; display: block;" />
+        <div style="border-radius: 14px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.12); aspect-ratio: 16 / 10; height: 260px; width: 100%; background: #1e293b; position: relative; margin: 0; padding: 0 !important; display: block;">
+          <img src="${url}" alt="${bName} photo ${i + 1}" style="width: 100% !important; height: 100% !important; max-width: none !important; max-height: none !important; object-fit: cover !important; object-position: center !important; display: block !important; margin: 0 !important; padding: 0 !important; border-radius: 0 !important; transition: transform 0.4s ease;" />
         </div>
       `).join('')}
     </div>
@@ -138,6 +138,33 @@ export function enhanceGeneratedHtml(
     object-fit: contain !important;
     object-position: center;
     border-radius: 8px;
+  }
+  /* Enforce identical, gap-free edge-to-edge photos for all galleries, cards, and grid items */
+  .ai-safeguard-gallery img,
+  [class*="gallery"] img,
+  [class*="portfolio"] img,
+  [class*="grid"] img:not(.logo),
+  [class*="card"] img:not(.logo),
+  section[id*="gallery"] img {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 220px !important;
+    max-height: 320px !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 12px;
+  }
+  .ai-safeguard-gallery div,
+  [class*="gallery"] [class*="item"],
+  [class*="grid"] > div:has(img:not(.logo)) {
+    overflow: hidden !important;
+    border-radius: 12px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: stretch !important;
   }
   @media (max-width: 768px) {
     header, .header, .navbar, [class*="header"] {
