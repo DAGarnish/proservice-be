@@ -48,6 +48,7 @@ model WebsiteSubmission {
 
   // Step 2 — Services
   main_services         String
+  business_description  String?  @default("")
   specialities          String?  @default("")
   price_list            String?  @default("")
   top_services_to_promote String? @default("")

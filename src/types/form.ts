@@ -27,6 +27,7 @@ export interface FormData {
 
   // Step 2 — Services
   main_services: string;
+  business_description: string;
   specialities: string;
   price_list: string;
   top_services_to_promote: string;
@@ -94,6 +95,7 @@ export interface StructuredBrief {
   occupation: string;
   years_in_business: string;
   main_services: string;
+  business_description: string;
   specialities: string;
   price_list: string;
   top_services_to_promote: string;

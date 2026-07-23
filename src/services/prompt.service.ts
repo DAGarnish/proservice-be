@@ -23,6 +23,7 @@ export function buildWebsiteBrief(data: FormData | Partial<FormData> | any): Web
     occupation: data.occupation || '',
     years_in_business: data.years_in_business || '',
     main_services: data.main_services || data.occupation || '',
+    business_description: data.business_description || '',
     specialities: data.specialities || '',
     price_list: data.price_list || '',
     top_services_to_promote: data.top_services_to_promote || '',
@@ -88,6 +89,7 @@ function generateNaturalLanguageBrief(s: StructuredBrief): string {
 
   lines.push(`SERVICES & OFFERINGS`);
   lines.push(`Main services: ${s.main_services}`);
+  if (s.business_description) lines.push(`Business description: ${s.business_description}`);
   if (s.specialities) lines.push(`Specialities: ${s.specialities}`);
   if (s.price_list) lines.push(`Pricing: ${s.price_list}`);
   if (s.top_services_to_promote) lines.push(`Priority services to promote: ${s.top_services_to_promote}`);
