@@ -1,7 +1,10 @@
 import { Router } from 'express';
-import { queueGeneration, getQueueStatus, triggerCronRecovery } from '../controllers/submission.controller';
+import { createSubmission, queueGeneration, getQueueStatus, triggerCronRecovery } from '../controllers/submission.controller';
 
 const router = Router();
+
+// POST /api/v1/submissions -> Creates the User + WebsiteSubmission DB rows
+router.post('/', createSubmission);
 
 // POST /api/v1/submissions/generate -> Queues generation task
 router.post('/generate', queueGeneration);

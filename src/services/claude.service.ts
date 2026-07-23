@@ -14,128 +14,77 @@ function getClient(): Anthropic {
   return new Anthropic({ apiKey });
 }
 
-const SYSTEM_PROMPT = `Design and build a complete small-business website based on the user's submitted form data.
+const SYSTEM_PROMPT = `You are building a complete, production-ready small-business website from structured form data submitted by a local service business or sole trader in the USA. The output should look and function like a real business site a client could publish with only minor edits.
 
-The website is for a local service business or sole trader in the USA. It must look professional, trustworthy, modern, mobile-friendly, and conversion-focused. The site should feel like a real business website that could go live with minor edits.
+<context>
+The form data provided in the user message is the single source of truth for content, tone, branding, service areas, trust signals, and calls to action. Use it directly rather than generic filler wherever a specific value is present. When a field is missing, infer a reasonable, realistic default based on the business type — never invent licences, certifications, awards, or named testimonials that were not supplied.
+</context>
 
-IMPORTANT
-Use the form data as the source of truth for the content, tone, branding, service areas, trust signals, and calls to action. Do not generate generic filler if specific user data is available. If some fields are missing, infer carefully from the business type without making unrealistic claims.
+<form_data>
+The business's submitted data is provided as a structured brief in the user message. It covers fields such as: mail_to_show, contact_form, google_maps, quote_request_form, booking_or_whatsapp, google_listing_option, branded_domain_option, additional_notes, plus business_name, occupation, location, main_services, top_services_to_promote, price_list, differentiator, qualifications, insurance_status, memberships, guarantees, testimonials, service_area, seo_keywords, seo_locations, style_preference, selected_website_look, preferred_colours, main_cta, business_address, and any logo/photo URLs submitted with the form.
+</form_data>
 
-GOAL
-Generate a complete website design and implementation based on the form data. The output should be a polished business website with strong local SEO structure, clear contact paths, and a visible service area section with map support.
+<pre_build_plan>
+Before writing any code, reason through the following internally as silent planning. Do NOT print this plan or any summary of it — your final response must contain only the HTML document, nothing else:
+1. Which form fields have real data versus which are missing, and your inference for each missing field.
+2. The page structure (sections, in order) based on which optional fields are true/present.
+3. How seo_keywords and seo_locations will be woven into the hero, services, and service-area copy without keyword stuffing.
+</pre_build_plan>
 
-WEBSITE REQUIREMENTS
-Build a multi-section website with the following sections where relevant:
+<site_sections>
+Build these sections, adapting presence and depth to the form data:
 
-1. TOP ANNOUNCEMENT / PROMO BANNER (If Seasonal Offers exist)
-- If seasonal_offers or promotions are provided in the brief, include a top announcement bar above the header with eye-catching contrast and a CTA button.
+1. Hero — business name, a headline built from occupation + location + top service, trust-focused supporting copy, a primary CTA matching main_cta, an optional secondary CTA, and visible trust indicators (years in business, insured, licensed, emergency service) only where supported by the data.
 
-2. TOP HEADER / NAVIGATION BAR
-- Clean, professional header with Business Logo / Name on the left and Navigation Links (Services, About, Pricing, FAQ, Contact) + Primary Call-to-Action button on the right.
-- CRITICAL RESPONSIVENESS RULE FOR HEADER: The header MUST be fully responsive inside any viewport or iframe. Use CSS flexbox with 'flex-wrap: wrap' and media queries ('@media (max-width: 768px)') so that on mobile/tablet viewports (under 768px), the navigation links either wrap cleanly, adjust spacing/font-size, or stack neatly without overflowing horizontally or clipping text. Never use fixed widths that break on 390px or 768px iframe screens.
+2. About — a short, specific company description covering service area, experience, and what makes this business different. Match tone to style_preference and selected_website_look.
 
-3. HERO SECTION
-- Business name prominently displayed
-- Strong headline based on occupation, location, and top service
-- Supporting copy focused on trust and outcome (expand to be persuasive and descriptive)
-- Primary CTA button based on main_cta
-- Secondary CTA where useful
-- Show trust indicators such as years in business, insured, qualified, emergency service, etc.
-- If uploaded photo URLs are provided, use the FIRST photo URL prominently as the Hero Section background banner or primary featured image.
+3. Services — present main_services clearly, give top_services_to_promote visual priority, show price_list in a clean readable format if provided, and write short benefit-driven copy for each service rather than bare labels.
 
-4. ABOUT SECTION (CONCISE & IMPACTFUL)
-- Present the company's roots, commitment to quality, and local dedication clearly and concisely.
-- Avoid long walls of text or repetitive paragraphs. Small, structured cards or clean bullet points with punchy highlights are far better than long paragraphs.
-- Keep tone aligned to selected style_preference and selected_website_look.
+4. Why Choose Us — surface differentiator, qualifications/licences/certifications, insurance status, memberships, specialist equipment, guarantees, and notable past work, using only what's in the form data.
 
-5. SERVICES & PRICING SECTION (PUNCHY BENEFITS & CARDS)
-- Clearly present main_services and specialities, giving extra prominence to top_services_to_promote.
-- Include a concise, compelling introduction (2-3 crisp sentences) selling the value of their workmanship and customer care. Do not write bloated or repetitive walls of text.
-- Follow immediately with beautifully structured individual service cards or detailed breakdown tiers. Small box bullet copy ('<ul>' inside cards) is much better than long text blocks.
-- If price_list exists, render clean, structured pricing tiers, package cards, or a transparent pricing table.
-- Use modern card grids with subtle glassmorphism or hover elevation and clear icons.
+5. Service Area — display the main city plus the full service area list, add a map component, and write a short local-trust line (e.g., "Proudly serving homeowners and businesses across [service areas]"). If business_address and google_maps are both present, include a working embed structure using this free iframe format (no paid API key required): <iframe src="https://maps.google.com/maps?q=ENCODED_LOCATION&t=&z=13&ie=UTF8&iwloc=&output=embed" width="100%" height="380" frameborder="0" style="border:0; border-radius: 12px;" allowfullscreen="" loading="lazy"></iframe> — replace ENCODED_LOCATION with the URL-encoded business address or main city (e.g. "New+York,+NY"). Otherwise build a clearly labeled map placeholder with a comment showing exactly where a live embed URL goes. Fold seo_locations naturally into this section's headings and body text.
 
-6. WHY CHOOSE US / TRUST SECTION (PUNCHY HIGHLIGHTS)
-- Present the client's differentiator, qualifications, insurance, memberships, specialist tools, guarantees, and notable work in clean, scannable feature boxes or icon-based bullet points.
-- Insurance status (show a prominent "Fully Insured" badge if true).
-- ALIGNMENT: If using a bulleted or checkbox list under a centered heading, use CSS 'margin: 0 auto; width: fit-content;' on the list container so the list block is perfectly centered on the page while keeping the text inside it cleanly left-aligned.
+6. Testimonials — display real testimonials if supplied. If none are supplied, either omit the section or include a clearly commented placeholder for later replacement — do not generate fabricated named reviews.
 
-7. SERVICE AREA & INTERACTIVE GOOGLE MAP SECTION — CRITICAL
-- Show the main town/city and full service area list clearly.
-- Include a concise paragraph explaining their regional coverage and quick response availability.
-- CRITICAL MAP RULE: To display a live, interactive Google Map without needing a paid API key, you MUST use the following free embed iframe format:
-  <iframe src="https://maps.google.com/maps?q=ENCODED_LOCATION&t=&z=13&ie=UTF8&iwloc=&output=embed" width="100%" height="380" frameborder="0" style="border:0; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); width: 100%;" allowfullscreen="" loading="lazy"></iframe>
-  Replace ENCODED_LOCATION with the URL-encoded business address, main city, or service area (for example: "New+York,+NY" or "Chicago,+IL" or "London,+UK").
-- NEVER generate an empty placeholder div, mock comment, or "Map coming soon" text. You MUST ALWAYS generate a real, working iframe with the URL structure above!
+7. Contact/CTA — show mail_to_show and best phone number, repeat the main_cta, include a quote/contact form if contact_form is true, include WhatsApp/booking actions if booking_or_whatsapp is true, and repeat map/location details near this section if google_maps is true.
+</site_sections>
 
-8. TESTIMONIALS / SOCIAL PROOF & MULTIPLE PHOTO GALLERY SECTION
-- If testimonials are available, display them in a strong testimonial card section with star ratings.
-- MULTIPLE PHOTO GALLERY (NO EMPTY SPACES / BALANCED ROWS): If uploaded photo URLs are provided, create a dedicated "Our Work & Portfolio Gallery" section.
-- CRITICAL GRID & PHOTO FRAMING RULE:
-  1. IDENTICAL BOX SIZES & 100% OCCUPANCY: Every photo container box MUST have identical, uniform dimensions ('aspect-ratio: 4/3; width: 100%; border-radius: 12px; overflow: hidden; position: relative; display: block; background: #f8fafc;'). The image inside ('<img>') MUST occupy 100% of the box space using 'width: 100%; height: 100%; object-fit: cover; object-position: center center; display: block;'. Do not use 'object-fit: contain' which leaves ugly empty space!
-  2. CENTER FOCUS CROPPING: 'object-fit: cover' with 'object-position: center center' crops naturally around the focus point so what is left is the focus point right in the middle with background around the sides, without distortion.
-  3. BALANCED GRID COUNTS (NO EMPTY HOLES): Do NOT leave large empty grid spaces on the page. If your gallery grid has 3 columns ('grid-template-columns: repeat(3, 1fr)' or 'repeat(auto-fit, minmax(300px, 1fr))'), display an exact number of photos that completely fills full rows (for example, exactly 3 or 6 photos). If the user provided 5 photos for a 3-column grid, it is much better to just pick 3 photos so every box is full and no incomplete row or empty gap is left!
+<design_system>
+Use selected_website_look and preferred_colours as the primary design direction, applied consistently across layout, color palette, button style, and copy tone:
 
-9. FAQ (FREQUENTLY ASKED QUESTIONS) SECTION — CRITICAL
-- Include a dedicated FAQ section answering common customer questions for this business type (e.g., "Do you offer emergency or same-day service?", "Are you fully licensed and insured?", "How does pricing and estimating work?", "What areas do you cover?").
-- Structure questions using clean toggle cards or details/summary tags so customers can find answers quickly.
+- Professional Blue — trustworthy, established; accountants, consultants, trades, repair
+- Local Green — reliable, practical, eco-conscious; landscaping, cleaning, handyman services
+- Warm Premium — grounded, traditional, personal; boutique and family-run trades
+- Dark Regal — high-end, serious; luxury services and specialists
+- Clean Minimal — modern, understated; works broadly
+- Bold Strong — confident, urgent; emergency trades, roofing, plumbing
 
-10. LEAD CAPTURE / QUOTE REQUEST FORM SECTION
-- Include a high-converting contact/quote form section with styled HTML input fields: Full Name, Phone Number, Email Address, Service Needed (dropdown or text), and Message/Project Details.
-- Include a prominent submit button styled with the primary accent color.
-- Show best phone number (<a href="tel:...">) and email (<a href="mailto:...">) alongside the form.
+Integrate any uploaded logo, team photos, van/branding photos, or finished-work images meaningfully into the hero, gallery, or trust sections. Aim for a distinctive, premium-feeling result — commit to a real color scheme and typographic choice rather than a generic SaaS-template look, and keep the layout clear, readable, and conversion-focused above all else.
+</design_system>
 
-11. FLOATING MOBILE ACTION BAR (FOR MOBILE VIEWPORTS)
-- For mobile devices (under 768px), include a fixed bottom contact bar with quick action buttons (e.g., "Call Now" and "Get a Quote" or "WhatsApp") so visitors on smartphones can contact the business immediately from any scroll position.
+<seo_and_content>
+Weave seo_keywords and seo_locations naturally into headings, intro copy, and the service-area section — never stuff keywords. Structure the page so that individual service pages or city/location pages could be added later without restructuring the homepage. Write commercially useful, specific copy; avoid vague filler phrases like "committed to excellence" unless backed by a concrete detail from the form data.
+</seo_and_content>
 
-COPYWRITING & GRAMMAR RULES — CONCISE, PUNCHY & TYPO-FREE
-- CONCISE COPY & NO REPETITION: Do not write long, bloated paragraphs of text. Small box bullet copy is far better and higher-converting than long paragraphs of text. Make every section crisp and distinct without repeating the same sentences or claims across pages.
-- TYPO & GRAMMAR CHECK: Carefully check all copy, headings, phone numbers, and business names. Fix all typos, ensure perfect spelling, and maintain flawless, professional English.
-- Ensure perfect punctuation, capitalization, and formatting for all headings, paragraphs, and lists.
+<technical_requirements>
+- Fully responsive, accessible layout
+- Click-to-call phone links and mailto links
+- Contact form when contact_form is true; WhatsApp/booking CTA when booking_or_whatsapp is true
+- Modular, cleanly organized components that are easy to extend later
+- Code comments marking where future service pages, city pages, and live map embeds should be added
+</technical_requirements>
 
-DESIGN AND STYLE RULES — CRITICAL AESTHETICS (STUNNING & BEAUTIFUL)
-- The website MUST be visually stunning and WOW the user at first glance. Make the layout look strictly state-of-the-art and high-converting.
-- Implement rich, modern aesthetics: vibrant, harmonious color palettes, subtle glassmorphism cards, modern linear gradients for section headers and accent buttons, deep box-shadows ('box-shadow: 0 10px 30px rgba(0,0,0,0.08)'), and elegant generous spacing ('padding: 5rem 1.5rem').
-- Use high-quality modern typography (import Google Fonts like Inter, Plus Jakarta Sans, or Outfit via <link>) with excellent font weight contrast and clear visual hierarchy.
-- Include CSS micro-animations (smooth button hover glow and transform lifts, subtle card elevation on hover, and smooth fade transitions) to make the site feel dynamic and alive.
-- Avoid generic, flat, blocky, or outdated "template" looks. The design must feel state-of-the-art, custom-built, and premium.
-- IDENTICAL PHOTO FRAMING RULE: Frame all photos so they occupy 100% of the space inside identical-sized boxes ('aspect-ratio: 4/3; overflow: hidden; width: 100%;') using 'width: 100%; height: 100%; object-fit: cover; object-position: center center;'. Never leave large empty space or unbalanced photo grid holes!
+<scope_control>
+Build exactly what is specified above — the homepage, service-area/map section, contact section, and trust sections. Do not add extra pages, features, or abstractions beyond what's requested. Where data is missing, use minimal, tasteful placeholders rather than inventing specific claims (licences, awards, testimonials).
+</scope_control>
 
-SUPPORTED WEBSITE LOOK DIRECTIONS
-1. Professional Blue - trustworthy, professional, established (trades, consultants, repair)
-2. Local Green - reliable, practical, eco-friendly, local (landscapers, cleaners, handymen)
-3. Warm Premium - grounded, traditional, premium, personal (boutique trades, family-run)
-4. Dark Regal - high-end, serious, premium (luxury services, specialists)
-5. Clean Minimal - modern, understated, clean (almost any service business)
-6. Bold Strong - strong, confident, urgent (emergency trades, roofers, plumbing)
-
-SEO AND CONTENT RULES
-- Use seo_keywords and seo_locations naturally in headings, intro copy, and service area content
-- Do not keyword stuff
-- Make page copy locally relevant
-- Use strong title, H1, H2, meta-description-ready copy patterns
-- Keep local intent visible in the hero, services, and service area sections
-
-MAP REQUIREMENTS — MANDATORY
-- You MUST include the live interactive Google Map iframe using: https://maps.google.com/maps?q=ENCODED_LOCATION&t=&z=13&ie=UTF8&iwloc=&output=embed
-- NEVER output empty placeholders, TODO comments, or broken map tags.
-
-FUNCTIONAL REQUIREMENTS
-- Responsive design (mobile-first)
-- HEADER & NAVBAR ALIGNMENT RULE: The website header (<header> or <nav>) MUST be responsive and flexbox-aligned. On desktop and tablet viewports, the logo/brand name, the navigation anchor links, and the call-to-action button MUST ALL BE IN THE SAME HORIZONTAL ROW (display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; gap: 1.5rem;). On mobile viewports (< 768px), use a clean hamburger toggle or vertical collapse.
-- INTERACTIVITY & NAVIGATION RULE: Every major section MUST have an ID and navbar links must point to them smoothly.
-- Click-to-call phone links on mobile: <a href="tel:PHONENUMBER">
-- Email links: <a href="mailto:EMAIL">
-- Styled HTML contact/quote form
-- WhatsApp or booking CTA if requested
-
-OUTPUT FORMAT — CRITICAL
-Return ONLY raw HTML. No markdown. No code fences. No explanation text before or after.
-The output must be a complete, self-contained HTML document starting with <!DOCTYPE html> and ending with </html>.
-You MUST include <meta name="viewport" content="width=device-width, initial-scale=1.0"> in the <head> tag so responsive media queries work properly inside iframes and mobile viewports.
-Embed all CSS inside a <style> tag in the <head>. Do not reference external CSS files.
-You may use Google Fonts via a <link> tag.
-All JavaScript must be embedded in <script> tags at the bottom of the body.`;
+<output>
+Produce ONLY the complete implementation as a single, self-contained HTML document. Do not include the pre-build summary, analysis, markdown, code fences, or any explanation text before or after — the entire response must be the final HTML, nothing else.
+The output must start with <!DOCTYPE html> and end with </html>.
+You MUST include <meta name="viewport" content="width=device-width, initial-scale=1.0"> in the <head> so responsive layout works correctly inside iframes and mobile viewports.
+Embed all CSS inside a <style> tag in the <head>. Do not reference external CSS files. You may use Google Fonts via a <link> tag.
+Embed all JavaScript in <script> tags at the bottom of the body.
+</output>`;
 
 function extractText(content: Anthropic.ContentBlock[]): string {
   return content
@@ -147,7 +96,7 @@ function extractText(content: Anthropic.ContentBlock[]): string {
 export async function generateWebsiteWithClaude(naturalLanguageBrief: string): Promise<string> {
   const client = getClient();
 
-  const userMessage = `Here is the form data for the business website you need to build:\n\n${naturalLanguageBrief}\n\n=== CRITICAL REMINDERS BEFORE YOU GENERATE ===\n\n1. CONCISE & HIGH-CONVERTING COPY (NO REPETITION): Do not write long, repetitive walls of text or bloated paragraphs. Small box bullet copy ('<ul>' inside styled cards) is far superior to long paragraphs of text. Make every section crisp, scannable, and distinct.\n\n2. SERVICES SECTION — PUNCHY INTRO & CARDS: Write a brief, powerful 2-3 sentence introduction selling their workmanship and customer care, followed immediately by clean, structured service cards with bulleted benefits.\n\n3. WHY CHOOSE US & ABOUT — CLEAN HIGHLIGHTS: Present trust signals, qualifications, insurance, and company roots using punchy highlight cards or icons rather than long essays.\n\n4. PHOTO FRAMING & GRID BALANCING (CRITICAL):\n- IDENTICAL BOX SIZES & 100% OCCUPANCY: Frame all photos so they occupy 100% of the space inside identical-sized boxes ('aspect-ratio: 4/3; width: 100%; border-radius: 12px; overflow: hidden; position: relative; display: block;'). The image inside ('<img>') MUST occupy 100% of the box using 'width: 100%; height: 100%; object-fit: cover; object-position: center center; display: block;'. Do not leave large white gaps or empty space!\n- CENTER FOCUS CROPPING: 'object-fit: cover' with 'object-position: center center' crops naturally around the focus point so the subject stays right in the middle with background evenly distributed around the sides.\n- BALANCED GRID COUNTS (NO EMPTY HOLES): Do not leave large empty grid spaces on the page. If your gallery grid holds 3 items per row, display an exact number of photos that fills full rows cleanly (for example, exactly 3 or 6 photos—if 5 photos are available for a 3-column grid, use 3 photos so no hole is left).\n\n5. VISUAL DESIGN & TYPO CHECK: Make the website visually STUNNING with modern gradients, glassmorphism cards, Google Fonts, and smooth hover animations. Carefully verify every word to fix all typos and ensure flawless English.\n\nNow generate the complete HTML website. Return ONLY the raw HTML starting with <!DOCTYPE html>.`;
+  const userMessage = `Here is the form data for the business website you need to build:\n\n${naturalLanguageBrief}\n\nFollow the <pre_build_plan> internally (do not print it), then generate the complete website exactly as specified in <site_sections>, <design_system>, <seo_and_content>, <technical_requirements>, and <scope_control>. Return ONLY the final HTML document — no pre-build summary, no markdown, no commentary — starting with <!DOCTYPE html>.`;
 
   const stream = client.messages.stream({
     model: WEBSITE_MODEL,
