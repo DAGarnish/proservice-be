@@ -1,7 +1,18 @@
-// src/services/gemini.service.ts
-// Calls Google Gemini 2.5 Flash API to generate raw SVG logos and complete small-business HTML websites.
+// src/services/claude.service.ts
+// Calls the Claude API (Anthropic) to generate raw SVG logos and complete small-business HTML websites.
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+import Anthropic from '@anthropic-ai/sdk';
+
+const WEBSITE_MODEL = 'claude-opus-4-8';
+const LOGO_MODEL = 'claude-opus-4-8';
+
+function getClient(): Anthropic {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    throw new Error('ANTHROPIC_API_KEY is not set in environment variables');
+  }
+  return new Anthropic({ apiKey });
+}
 
 const SYSTEM_PROMPT = `Design and build a complete small-business website based on the user's submitted form data.
 
@@ -126,58 +137,37 @@ Embed all CSS inside a <style> tag in the <head>. Do not reference external CSS 
 You may use Google Fonts via a <link> tag.
 All JavaScript must be embedded in <script> tags at the bottom of the body.`;
 
-export async function generateWebsiteWithGemini(naturalLanguageBrief: string): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY is not set in environment variables');
-  }
+function extractText(content: Anthropic.ContentBlock[]): string {
+  return content
+    .filter((block): block is Anthropic.TextBlock => block.type === 'text')
+    .map((block) => block.text)
+    .join('');
+}
 
-  const url = `${GEMINI_API_URL}?key=${apiKey}`;
+export async function generateWebsiteWithClaude(naturalLanguageBrief: string): Promise<string> {
+  const client = getClient();
 
-  const requestBody = {
-    system_instruction: {
-      parts: [{ text: SYSTEM_PROMPT }],
-    },
-    contents: [
-      {
-        role: 'user',
-        parts: [
-          {
-            text: `Here is the form data for the business website you need to build:\n\n${naturalLanguageBrief}\n\n=== CRITICAL REMINDERS BEFORE YOU GENERATE ===\n\n1. CONCISE & HIGH-CONVERTING COPY (NO REPETITION): Do not write long, repetitive walls of text or bloated paragraphs. Small box bullet copy ('<ul>' inside styled cards) is far superior to long paragraphs of text. Make every section crisp, scannable, and distinct.\n\n2. SERVICES SECTION — PUNCHY INTRO & CARDS: Write a brief, powerful 2-3 sentence introduction selling their workmanship and customer care, followed immediately by clean, structured service cards with bulleted benefits.\n\n3. WHY CHOOSE US & ABOUT — CLEAN HIGHLIGHTS: Present trust signals, qualifications, insurance, and company roots using punchy highlight cards or icons rather than long essays.\n\n4. PHOTO FRAMING & GRID BALANCING (CRITICAL):\n- IDENTICAL BOX SIZES & 100% OCCUPANCY: Frame all photos so they occupy 100% of the space inside identical-sized boxes ('aspect-ratio: 4/3; width: 100%; border-radius: 12px; overflow: hidden; position: relative; display: block;'). The image inside ('<img>') MUST occupy 100% of the box using 'width: 100%; height: 100%; object-fit: cover; object-position: center center; display: block;'. Do not leave large white gaps or empty space!\n- CENTER FOCUS CROPPING: 'object-fit: cover' with 'object-position: center center' crops naturally around the focus point so the subject stays right in the middle with background evenly distributed around the sides.\n- BALANCED GRID COUNTS (NO EMPTY HOLES): Do not leave large empty grid spaces on the page. If your gallery grid holds 3 items per row, display an exact number of photos that fills full rows cleanly (for example, exactly 3 or 6 photos—if 5 photos are available for a 3-column grid, use 3 photos so no hole is left).\n\n5. VISUAL DESIGN & TYPO CHECK: Make the website visually STUNNING with modern gradients, glassmorphism cards, Google Fonts, and smooth hover animations. Carefully verify every word to fix all typos and ensure flawless English.\n\nNow generate the complete HTML website. Return ONLY the raw HTML starting with <!DOCTYPE html>.`,
-          },
-        ],
-      },
-    ],
-    generationConfig: {
-      temperature: 0.85,
-      maxOutputTokens: 65536,
-      responseMimeType: 'text/plain',
-    },
-  };
+  const userMessage = `Here is the form data for the business website you need to build:\n\n${naturalLanguageBrief}\n\n=== CRITICAL REMINDERS BEFORE YOU GENERATE ===\n\n1. CONCISE & HIGH-CONVERTING COPY (NO REPETITION): Do not write long, repetitive walls of text or bloated paragraphs. Small box bullet copy ('<ul>' inside styled cards) is far superior to long paragraphs of text. Make every section crisp, scannable, and distinct.\n\n2. SERVICES SECTION — PUNCHY INTRO & CARDS: Write a brief, powerful 2-3 sentence introduction selling their workmanship and customer care, followed immediately by clean, structured service cards with bulleted benefits.\n\n3. WHY CHOOSE US & ABOUT — CLEAN HIGHLIGHTS: Present trust signals, qualifications, insurance, and company roots using punchy highlight cards or icons rather than long essays.\n\n4. PHOTO FRAMING & GRID BALANCING (CRITICAL):\n- IDENTICAL BOX SIZES & 100% OCCUPANCY: Frame all photos so they occupy 100% of the space inside identical-sized boxes ('aspect-ratio: 4/3; width: 100%; border-radius: 12px; overflow: hidden; position: relative; display: block;'). The image inside ('<img>') MUST occupy 100% of the box using 'width: 100%; height: 100%; object-fit: cover; object-position: center center; display: block;'. Do not leave large white gaps or empty space!\n- CENTER FOCUS CROPPING: 'object-fit: cover' with 'object-position: center center' crops naturally around the focus point so the subject stays right in the middle with background evenly distributed around the sides.\n- BALANCED GRID COUNTS (NO EMPTY HOLES): Do not leave large empty grid spaces on the page. If your gallery grid holds 3 items per row, display an exact number of photos that fills full rows cleanly (for example, exactly 3 or 6 photos—if 5 photos are available for a 3-column grid, use 3 photos so no hole is left).\n\n5. VISUAL DESIGN & TYPO CHECK: Make the website visually STUNNING with modern gradients, glassmorphism cards, Google Fonts, and smooth hover animations. Carefully verify every word to fix all typos and ensure flawless English.\n\nNow generate the complete HTML website. Return ONLY the raw HTML starting with <!DOCTYPE html>.`;
+
+  const stream = client.messages.stream({
+    model: WEBSITE_MODEL,
+    max_tokens: 64000,
+    system: SYSTEM_PROMPT,
+    thinking: { type: 'adaptive' },
+    messages: [{ role: 'user', content: userMessage }],
+  });
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 second timeout for Gemini full generation
+  const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 second timeout for full generation
 
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody),
-      signal: controller.signal,
-    } as any);
-
+    const message = await stream.finalMessage();
     clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Gemini API error ${response.status}: ${errorText}`);
-    }
-
-    const result: any = await response.json();
-    const rawText: string = result?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const rawText = extractText(message.content);
 
     if (!rawText) {
-      throw new Error('Gemini returned an empty response');
+      throw new Error('Claude returned an empty response');
     }
 
     const cleaned = rawText
@@ -193,30 +183,34 @@ export async function generateWebsiteWithGemini(naturalLanguageBrief: string): P
   }
 }
 
-export async function generateLogoWithGemini(businessName: string, occupation: string, prompt: string): Promise<string | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
+export async function generateLogoWithClaude(businessName: string, occupation: string, prompt: string): Promise<string | null> {
+  let client: Anthropic;
+  try {
+    client = getClient();
+  } catch {
+    return null;
+  }
 
   try {
-    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: "You are an expert, award-winning logo designer. Your ONLY job is to output a beautifully aesthetic, modern, and highly premium raw SVG code. Do not output anything other than the exact SVG code starting with <svg> and ending with </svg>." }] },
-        contents: [{ role: 'user', parts: [{ text: `Generate a stunning, modern vector logo for Business: "${businessName || 'My Business'}", Industry: "${occupation || 'Services'}". Prompt: "${prompt}". Ensure it has a transparent background, cohesive brand colors, perfectly scaled proportions (use viewBox), and crisp, professional vector shapes.` }] }],
-        generationConfig: { temperature: 0.8, maxOutputTokens: 8192, responseMimeType: 'text/plain' },
-      }),
-    } as any);
+    const message = await client.messages.create({
+      model: LOGO_MODEL,
+      max_tokens: 8192,
+      system: "You are an expert, award-winning logo designer. Your ONLY job is to output a beautifully aesthetic, modern, and highly premium raw SVG code. Do not output anything other than the exact SVG code starting with <svg> and ending with </svg>.",
+      thinking: { type: 'adaptive' },
+      messages: [
+        {
+          role: 'user',
+          content: `Generate a stunning, modern vector logo for Business: "${businessName || 'My Business'}", Industry: "${occupation || 'Services'}". Prompt: "${prompt}". Ensure it has a transparent background, cohesive brand colors, perfectly scaled proportions (use viewBox), and crisp, professional vector shapes.`,
+        },
+      ],
+    });
 
-    if (response.ok) {
-      const result: any = await response.json();
-      const rawText = result?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      const svgMatch = rawText.match(/(<svg[^>]*>[\s\S]*<\/svg>)/i);
-      if (svgMatch) {
-        const cleanedSvg = svgMatch[1].trim();
-        const base64Svg = Buffer.from(cleanedSvg).toString('base64');
-        return `data:image/svg+xml;base64,${base64Svg}`;
-      }
+    const rawText = extractText(message.content);
+    const svgMatch = rawText.match(/(<svg[^>]*>[\s\S]*<\/svg>)/i);
+    if (svgMatch) {
+      const cleanedSvg = svgMatch[1].trim();
+      const base64Svg = Buffer.from(cleanedSvg).toString('base64');
+      return `data:image/svg+xml;base64,${base64Svg}`;
     }
   } catch (err) {
     console.error('[PROSERVICE-BE] Logo generation error:', err);

@@ -5,14 +5,14 @@
 
 import { prisma, withPrismaRetry } from '../config/prisma';
 import { buildWebsiteBrief } from './prompt.service';
-import { generateWebsiteWithGemini, generateLogoWithGemini } from './gemini.service';
+import { generateWebsiteWithClaude, generateLogoWithClaude } from './claude.service';
 import { enhanceGeneratedHtml } from './htmlSafeguard.service';
 import { sendWelcomePreviewEmail } from './email.service';
 
 class GenerationQueue {
   private queue: string[] = [];
   private activeSet: Set<string> = new Set();
-  private concurrency: number = 1; // Process 1 site at a time to prevent Gemini API 429 rate limit or server overload
+  private concurrency: number = 1; // Process 1 site at a time to prevent Claude API 429 rate limit or server overload
   private maxTaskRetries: number = 3;
 
   /**
@@ -135,7 +135,7 @@ class GenerationQueue {
     // Step 1: Generate Logo if needed
     if (submission.logo_prompt && !finalLogoUrl) {
       console.log(`[QUEUE] Generating logo for ${submission.business_name}...`);
-      finalLogoUrl = await generateLogoWithGemini(submission.business_name, submission.occupation, submission.logo_prompt);
+      finalLogoUrl = await generateLogoWithClaude(submission.business_name, submission.occupation, submission.logo_prompt);
       if (finalLogoUrl) {
         await withPrismaRetry(() =>
           prisma.websiteSubmission.update({
@@ -149,11 +149,11 @@ class GenerationQueue {
     // Step 2: Build Brief
     const { naturalLanguage } = buildWebsiteBrief(submission);
 
-    // Step 3: Retry Loop with Backoff for Gemini API
+    // Step 3: Retry Loop with Backoff for Claude API
     for (let attempt = 1; attempt <= this.maxTaskRetries; attempt++) {
       try {
         console.log(`[QUEUE] AI Website generation attempt ${attempt}/${this.maxTaskRetries} for ${submission.business_name || submissionId}...`);
-        generatedHtml = await generateWebsiteWithGemini(naturalLanguage);
+        generatedHtml = await generateWebsiteWithClaude(naturalLanguage);
 
         if (generatedHtml && generatedHtml.trim().startsWith('<')) {
           isGenerationSuccess = true;
@@ -219,7 +219,7 @@ class GenerationQueue {
           where: { id: submissionId },
           data: {
             status: 'failed',
-            errorMessage: 'All generation attempts failed or rate limited by Gemini API',
+            errorMessage: 'All generation attempts failed or rate limited by Claude API',
             lastAttemptAt: new Date(),
           },
         })
