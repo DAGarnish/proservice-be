@@ -66,19 +66,38 @@ export function enhanceGeneratedHtml(
 
     const hasUploadedPhoto = photoUrls.some(url => modified.includes(url));
     if ((!hasUploadedPhoto || photoUrls.length > 1) && !modified.includes('ai-safeguard-gallery')) {
+      // Split photos into up to 3 balanced rows so no row is left with an awkward gap.
+      const rowCount = Math.min(3, photoUrls.length);
+      const rows: string[][] = Array.from({ length: rowCount }, () => []);
+      const base = Math.floor(photoUrls.length / rowCount);
+      let remainder = photoUrls.length % rowCount;
+      let cursor = 0;
+      for (let r = 0; r < rowCount; r++) {
+        const size = base + (remainder > 0 ? 1 : 0);
+        if (remainder > 0) remainder--;
+        rows[r] = photoUrls.slice(cursor, cursor + size);
+        cursor += size;
+      }
+      const rowHeights = ['260px', '320px', '260px'];
+      let photoIndex = 0;
+      const rowsHtml = rows.map((row, rIdx) => `
+    <div style="display: grid; grid-template-columns: repeat(${row.length}, 1fr); gap: 1.75rem; align-items: stretch; margin-bottom: 1.75rem;">
+      ${row.map((url) => {
+        photoIndex++;
+        return `
+      <div style="border-radius: 14px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.12); height: ${rowHeights[rIdx] || '260px'}; width: 100%; background: #1e293b; position: relative; margin: 0; padding: 0 !important; display: block;">
+        <img src="${url}" alt="${bName} photo ${photoIndex}" style="width: 100% !important; height: 100% !important; max-width: none !important; max-height: none !important; object-fit: cover !important; object-position: center !important; display: block !important; margin: 0 !important; padding: 0 !important; border-radius: 0 !important; transition: transform 0.4s ease;" />
+      </div>`;
+      }).join('')}
+    </div>`).join('');
+
       const galleryHtml = `
-<!-- AI Safeguard: Uploaded Business Photos Gallery -->
+<!-- AI Safeguard: Uploaded Business Photos Gallery (3-row layout) -->
 <section class="ai-safeguard-gallery" id="gallery" style="padding: 4.5rem 1.5rem; background: #f8fafc; text-align: center;">
   <div style="max-width: 1150px; margin: 0 auto;">
-    <h2 style="font-size: 2.3rem; font-weight: 800; margin-bottom: 0.6rem; color: #0f172a;">Our Work &amp; Portfolio Gallery</h2>
-    <p style="color: #4b5563; margin-bottom: 3rem; font-size: 1.15rem;">Take a look at our recent projects, equipment, and professional standards.</p>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.75rem; align-items: stretch;">
-      ${photoUrls.map((url, i) => `
-        <div style="border-radius: 14px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.12); aspect-ratio: 16 / 10; height: 260px; width: 100%; background: #1e293b; position: relative; margin: 0; padding: 0 !important; display: block;">
-          <img src="${url}" alt="${bName} photo ${i + 1}" style="width: 100% !important; height: 100% !important; max-width: none !important; max-height: none !important; object-fit: cover !important; object-position: center !important; display: block !important; margin: 0 !important; padding: 0 !important; border-radius: 0 !important; transition: transform 0.4s ease;" />
-        </div>
-      `).join('')}
-    </div>
+    <h2 style="font-size: 2.3rem; font-weight: 800; margin-bottom: 0.6rem; color: #0f172a;">Our Work &amp; Portfolio</h2>
+    <p style="color: #4b5563; margin-bottom: 3rem; font-size: 1.15rem;">A look at completed ${bName} projects across ${mapLoc}.</p>
+    ${rowsHtml}
   </div>
 </section>`;
       if (modified.includes('<footer')) {

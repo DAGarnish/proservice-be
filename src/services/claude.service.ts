@@ -42,12 +42,22 @@ Build these sections, adapting presence and depth to the form data:
 
 4. Why Choose Us — surface differentiator, qualifications/licences/certifications, insurance status, memberships, specialist equipment, guarantees, and notable past work, using only what's in the form data.
 
-5. Service Area — display the main city plus the full service area list, add a map component, and write a short local-trust line (e.g., "Proudly serving homeowners and businesses across [service areas]"). If business_address and google_maps are both present, include a working embed structure using this free iframe format (no paid API key required): <iframe src="https://maps.google.com/maps?q=ENCODED_LOCATION&t=&z=13&ie=UTF8&iwloc=&output=embed" width="100%" height="380" frameborder="0" style="border:0; border-radius: 12px;" allowfullscreen="" loading="lazy"></iframe> — replace ENCODED_LOCATION with the URL-encoded business address or main city (e.g. "New+York,+NY"). Otherwise build a clearly labeled map placeholder with a comment showing exactly where a live embed URL goes. Fold seo_locations naturally into this section's headings and body text.
+5. Portfolio / Our Work Gallery — ONLY when uploaded business photo URLs are present in the brief. Give it a real heading (not "Gallery" alone — tie it to the business, e.g. "Our Recent [Occupation] Work in [Location]") and one short, specific description line that refers only to the photos actually rendered below it (e.g. "A look at completed jobs across [service area]") — never an invitational line pointing at content that isn't there. Arrange the photos into exactly three distinct rows (not one continuous auto-fit grid) — split the available photos as evenly as possible across the three rows so no row is left with an awkward gap, and give each row identical-sized, gap-free image boxes (consistent aspect-ratio, object-fit: cover, object-position: center). You may vary row height slightly between rows (e.g. a taller middle row) for editorial rhythm, but every image within a single row must be the same size. If fewer than 3 photos are supplied, do not force empty rows — use as many rows as photos genuinely support. Never invent or duplicate-pad photos to fill a row.
 
-6. Testimonials — display real testimonials if supplied. If none are supplied, either omit the section or include a clearly commented placeholder for later replacement — do not generate fabricated named reviews.
+6. Service Area — display the main city plus the full service area list, add a map component, and write a short local-trust line (e.g., "Proudly serving homeowners and businesses across [service areas]"). If business_address and google_maps are both present, include a working embed structure using this free iframe format (no paid API key required): <iframe src="https://maps.google.com/maps?q=ENCODED_LOCATION&t=&z=13&ie=UTF8&iwloc=&output=embed" width="100%" height="380" frameborder="0" style="border:0; border-radius: 12px;" allowfullscreen="" loading="lazy"></iframe> — replace ENCODED_LOCATION with the URL-encoded business address or main city (e.g. "New+York,+NY"). Otherwise build a clearly labeled map placeholder with a comment showing exactly where a live embed URL goes. Fold seo_locations naturally into this section's headings and body text.
 
-7. Contact/CTA — show mail_to_show and best phone number, repeat the main_cta, include a quote/contact form if contact_form is true, include WhatsApp/booking actions if booking_or_whatsapp is true, and repeat map/location details near this section if google_maps is true.
+7. Testimonials — display real testimonials if supplied, formatted as a proper testimonial section (quote, name/initials, and role or location if given). If no testimonials are supplied, omit the section entirely — do not insert a placeholder sentence, a "coming soon" note, or a comment inviting later replacement, and never fabricate named reviews.
+
+8. Contact/CTA — show mail_to_show and best phone number, repeat the main_cta, include a quote/contact form if contact_form is true, include WhatsApp/booking actions if booking_or_whatsapp is true, and repeat map/location details near this section if google_maps is true.
 </site_sections>
+
+<content_quality_rules>
+- Never use generic invitational filler such as "Take a look at our recent projects, equipment, and professional standards," "Check out our work," "See what makes us different," or any similar sentence that references content (photos, projects, certifications, awards) not actually rendered on the page.
+- Every sentence must refer only to content that is genuinely present in the form data or genuinely rendered elsewhere on the page.
+- In Why Choose Us, if fewer than three real data points exist (differentiator, qualifications, insurance, memberships, specialist equipment, guarantees, notable work), keep the section short and specific rather than padding it — do not close with a line inviting the visitor to "see" projects, equipment, or standards that aren't actually rendered.
+- If a section would otherwise end on a weak or generic closing line, either end on the strongest concrete detail available or close with a direct CTA (e.g., "Call now for a free quote") instead of a vague summary sentence.
+- When in doubt, cut the sentence rather than pad it.
+</content_quality_rules>
 
 <design_system>
 Use selected_website_look and preferred_colours as the primary design direction, applied consistently across layout, color palette, button style, and copy tone:
@@ -75,7 +85,7 @@ Weave seo_keywords and seo_locations naturally into headings, intro copy, and th
 </technical_requirements>
 
 <scope_control>
-Build exactly what is specified above — the homepage, service-area/map section, contact section, and trust sections. Do not add extra pages, features, or abstractions beyond what's requested. Where data is missing, use minimal, tasteful placeholders rather than inventing specific claims (licences, awards, testimonials).
+Build exactly what is specified above — the homepage, service-area/map section, portfolio gallery (only if photos exist), contact section, and trust sections. Do not add extra pages, features, or abstractions beyond what's requested. Where data is missing, use minimal, tasteful placeholders rather than inventing specific claims (licences, awards, testimonials). A missing section should be omitted, not padded with a placeholder sentence.
 </scope_control>
 
 <output>
