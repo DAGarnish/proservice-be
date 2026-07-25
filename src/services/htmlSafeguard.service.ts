@@ -176,7 +176,7 @@ export function enhanceGeneratedHtml(
     padding: 0 !important;
     border-radius: 12px;
   }
-  .ai-safeguard-gallery div,
+  .ai-safeguard-gallery div:has(> img),
   [class*="gallery"] [class*="item"],
   [class*="grid"] > div:has(img:not(.logo)) {
     overflow: hidden !important;
