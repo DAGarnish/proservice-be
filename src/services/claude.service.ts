@@ -82,6 +82,7 @@ Weave seo_keywords and seo_locations naturally into headings, intro copy, and th
 - Contact form when contact_form is true; WhatsApp/booking CTA when booking_or_whatsapp is true
 - Modular, cleanly organized components that are easy to extend later
 - Code comments marking where future service pages, city pages, and live map embeds should be added
+- The top navigation header must include the business name/logo and a primary CTA button matching main_cta (e.g. "Call Now" or "Get a Quote"). This header CTA button's text must always be white (color: #ffffff) with a solid, contrasting background — never dark or default-colored text — so it stays clearly readable regardless of the header's own background color.
 </technical_requirements>
 
 <scope_control>
