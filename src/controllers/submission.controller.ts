@@ -173,20 +173,20 @@ export const createSubmission = async (req: Request, res: Response): Promise<voi
     // if the DB write fails, the caller gets success:false and a real error.
     await withPrismaRetry(() => prisma.websiteSubmission.create({ data: submissionData }));
 
-    // Email sends are best-effort — a failed notification shouldn't fail the
-    // submission itself, but we log loudly so it's diagnosable.
-    try {
-      await sendSubmissionEmail(body, previewId);
-    } catch (emailError) {
-      console.error('[PROSERVICE-BE] Failed to send admin notification email:', emailError);
-    }
-    try {
-      await sendUserVerificationEmail(body, previewId, verificationToken);
-    } catch (userEmailError) {
-      console.error('[PROSERVICE-BE] Failed to send user verification email:', userEmailError);
-    }
-
+    // Respond as soon as the DB write succeeds — do not make the caller (the
+    // frontend's Vercel serverless function) wait on SMTP round-trips, which
+    // can push the combined Vercel -> EC2 -> SMTP chain past its function timeout.
     res.status(200).json({ success: true, previewId, userId, verificationToken });
+
+    // Fire-and-forget email sends — best-effort, logged loudly if they fail,
+    // but never block or fail the submission itself. Safe here because this
+    // is a persistent Node process, not a serverless function.
+    sendSubmissionEmail(body, previewId).catch((emailError) => {
+      console.error('[PROSERVICE-BE] Failed to send admin notification email:', emailError);
+    });
+    sendUserVerificationEmail(body, previewId, verificationToken).catch((userEmailError) => {
+      console.error('[PROSERVICE-BE] Failed to send user verification email:', userEmailError);
+    });
   } catch (err: any) {
     console.error('[PROSERVICE-BE] Failed to create website submission:', err);
     res.status(500).json({ success: false, error: err.message || 'Failed to save your submission. Please try again.' });

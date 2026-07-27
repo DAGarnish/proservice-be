@@ -27,13 +27,12 @@ export const createContactSubmission = async (req: Request, res: Response): Prom
       },
     }));
 
-    try {
-      await sendContactFormEmail(first_name, last_name, email_address, phone_number || '', message);
-    } catch (emailError) {
-      console.error('[PROSERVICE-BE] Failed to send contact notification email:', emailError);
-    }
-
+    // Respond immediately — don't make the caller wait on the SMTP round-trip.
     res.status(200).json({ success: true });
+
+    sendContactFormEmail(first_name, last_name, email_address, phone_number || '', message).catch((emailError) => {
+      console.error('[PROSERVICE-BE] Failed to send contact notification email:', emailError);
+    });
   } catch (err: any) {
     console.error('[PROSERVICE-BE] Failed to create contact submission:', err);
     res.status(500).json({ success: false, error: err.message || 'Failed to save your message. Please try again.' });
