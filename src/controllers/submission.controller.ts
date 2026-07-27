@@ -6,6 +6,17 @@ import { runRecoveryScanNow } from '../services/cron.service';
 import { prisma, withPrismaRetry } from '../config/prisma';
 import { sendSubmissionEmail, sendUserVerificationEmail } from '../services/email.service';
 
+// Emails exempt from the per-email website generation limit.
+const UNLIMITED_GENERATION_EMAILS = new Set(
+  (process.env.UNLIMITED_GENERATION_EMAILS || 'garnish.ecom@gmail.com,abhisespoudyal@gmail.com')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean)
+);
+
+// Max number of websites a single (non-exempt) email may generate.
+const MAX_GENERATIONS_PER_EMAIL = parseInt(process.env.MAX_GENERATIONS_PER_EMAIL || '2', 10);
+
 function validateSubmissionPayload(body: any): string | null {
   if (!body.email_address || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email_address)) {
     return 'A valid email address is required';
@@ -35,6 +46,21 @@ export const createSubmission = async (req: Request, res: Response): Promise<voi
     if (validationError) {
       res.status(400).json({ success: false, error: validationError });
       return;
+    }
+
+    // Enforce a per-email lifetime cap on website generations. A small
+    // allowlist of internal/testing emails is exempt from the cap.
+    if (!UNLIMITED_GENERATION_EMAILS.has(email)) {
+      const existingCount = await withPrismaRetry(() =>
+        prisma.websiteSubmission.count({ where: { email_address: { equals: email, mode: 'insensitive' } } })
+      );
+      if (existingCount >= MAX_GENERATIONS_PER_EMAIL) {
+        res.status(403).json({
+          success: false,
+          error: `This email address has reached the maximum of ${MAX_GENERATIONS_PER_EMAIL} website generations.`,
+        });
+        return;
+      }
     }
 
     const previewId = crypto.randomUUID();

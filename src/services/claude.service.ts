@@ -111,7 +111,15 @@ export async function generateWebsiteWithClaude(naturalLanguageBrief: string): P
   const stream = client.messages.stream({
     model: WEBSITE_MODEL,
     max_tokens: 64000,
-    system: SYSTEM_PROMPT,
+    system: [
+      {
+        type: 'text',
+        text: SYSTEM_PROMPT,
+        // Identical on every call — cache it so repeat generations only pay
+        // full price for the per-business brief in the user message.
+        cache_control: { type: 'ephemeral', ttl: '1h' },
+      },
+    ],
     thinking: { type: 'adaptive' },
     messages: [{ role: 'user', content: userMessage }],
   });
