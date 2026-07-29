@@ -168,7 +168,6 @@ export function enhanceGeneratedHtml(
     width: 100% !important;
     height: 100% !important;
     min-height: 220px !important;
-    max-height: 320px !important;
     object-fit: cover !important;
     object-position: center !important;
     display: block !important;
