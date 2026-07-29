@@ -3,8 +3,8 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 
-const WEBSITE_MODEL = 'claude-opus-4-8';
-const LOGO_MODEL = 'claude-opus-4-8';
+const WEBSITE_MODEL = 'claude-opus-5';
+const LOGO_MODEL = 'claude-opus-5';
 
 function getClient(): Anthropic {
   const apiKey = process.env.ANTHROPIC_API_KEY;
