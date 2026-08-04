@@ -159,6 +159,8 @@ export const createSubmission = async (req: Request, res: Response): Promise<voi
       testimonials_on_site: body.testimonials_on_site !== undefined ? Boolean(body.testimonials_on_site) : true,
       quote_request_form: body.quote_request_form !== undefined ? Boolean(body.quote_request_form) : true,
       booking_or_whatsapp: body.booking_or_whatsapp || 'none',
+      primary_language: body.primary_language || 'english',
+      additional_languages: body.additional_languages || '',
       google_listing_option: Boolean(body.google_listing_option),
       branded_domain_option: Boolean(body.branded_domain_option),
       additional_notes: body.additional_notes || '',

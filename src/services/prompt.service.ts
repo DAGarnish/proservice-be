@@ -60,6 +60,8 @@ export function buildWebsiteBrief(data: FormData | Partial<FormData> | any): Web
     testimonials_on_site: data.testimonials_on_site !== undefined ? Boolean(data.testimonials_on_site) : true,
     quote_request_form: data.quote_request_form !== undefined ? Boolean(data.quote_request_form) : true,
     booking_or_whatsapp: data.booking_or_whatsapp || 'none',
+    primary_language: data.primary_language || 'english',
+    additional_languages: data.additional_languages || '',
     google_listing_option: Boolean(data.google_listing_option),
     branded_domain_option: Boolean(data.branded_domain_option),
     additional_notes: data.additional_notes || '',
@@ -131,6 +133,17 @@ function generateNaturalLanguageBrief(s: StructuredBrief): string {
   lines.push(`CONTACT & CONVERSION`);
   lines.push(`Display phone: ${s.contact_number_to_show}`);
   lines.push(`Display email: ${s.contact_email_to_show}`);
+
+  lines.push(`\nLANGUAGES`);
+  const primaryLang = s.primary_language === 'english_spanish' ? 'English (Primary), Spanish (Secondary)' :
+                      s.primary_language === 'spanish_english' ? 'Spanish (Primary), English (Secondary)' :
+                      s.primary_language === 'spanish' ? 'Only Spanish' : 'Only English';
+  lines.push(`Primary Language Options: ${primaryLang}`);
+  if (s.additional_languages) {
+    lines.push(`Additional Languages Requested by Client: ${s.additional_languages}`);
+    lines.push(`LANGUAGE REQUIREMENT: The client has requested this website in additional language(s): ${s.additional_languages}. Implement full multi-language support on their website — translate every single word on every page/section (headings, body copy, CTAs, nav, footer, form labels, and placeholder text) into each requested language. Nothing may be left untranslated.`);
+  }
+
   const firstSeoLoc = (s.seo_locations ? s.seo_locations.split(';')[0] : '') || s.business_address || s.service_area || 'USA';
   const features = [
     s.contact_form ? 'Styled HTML Contact Form' : '',

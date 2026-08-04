@@ -89,6 +89,20 @@ Weave seo_keywords and seo_locations naturally into headings, intro copy, and th
 Build exactly what is specified above — the homepage, service-area/map section, portfolio gallery (only if photos exist), contact section, and trust sections. Do not add extra pages, features, or abstractions beyond what's requested. Where data is missing, use minimal, tasteful placeholders rather than inventing specific claims (licences, awards, testimonials). A missing section should be omitted, not padded with a placeholder sentence.
 </scope_control>
 
+<multi_language_requirement>
+The brief's LANGUAGES section states the client's primary language setup and, if present, any additional languages the client has requested. If client requests other languages, implement this on their website: add a small language switcher in the header (flag or text label, e.g. "EN | ES | FR") that toggles the visible page text between languages within this single HTML document — do not output separate files per language.
+
+Every requested language must be a complete, professional translation of the ENTIRE page, not a partial or summarized version. This includes:
+- All headings, body copy, and button/CTA labels
+- Navigation links and footer text (including any legal links)
+- Form field labels AND placeholder text (e.g. placeholder="Your Name" must become the translated equivalent in each language, never left in English)
+- alt text on images, aria-labels, and title attributes
+- The <title> tag and meta description
+- FAQ questions/answers, testimonial framing text, and trust-badge copy
+
+Ensure every word is translated on every page/section — never leave a mix of languages visible after switching; a missed string is a defect. Keep data-driven facts (business name, phone number, address, prices) unchanged across languages — translate only the surrounding copy. Default to the client's stated primary language on load, with other languages selectable via the toggle.
+</multi_language_requirement>
+
 <output>
 Produce ONLY the complete implementation as a single, self-contained HTML document. Do not include the pre-build summary, analysis, markdown, code fences, or any explanation text before or after — the entire response must be the final HTML, nothing else.
 The output must start with <!DOCTYPE html> and end with </html>.

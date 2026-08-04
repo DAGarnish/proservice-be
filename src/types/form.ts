@@ -74,6 +74,8 @@ export interface FormData {
   testimonials_on_site: boolean;
   quote_request_form: boolean;
   booking_or_whatsapp: BookingOrWhatsapp | string;
+  primary_language: string;
+  additional_languages: string;
 
   // Step 7 — Add-ons & Final Details
   google_listing_option: boolean;
@@ -127,6 +129,8 @@ export interface StructuredBrief {
   testimonials_on_site: boolean;
   quote_request_form: boolean;
   booking_or_whatsapp: string;
+  primary_language: string;
+  additional_languages: string;
   google_listing_option: boolean;
   branded_domain_option: boolean;
   additional_notes: string;

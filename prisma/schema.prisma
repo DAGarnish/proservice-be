@@ -94,6 +94,8 @@ model WebsiteSubmission {
   testimonials_on_site   Boolean  @default(true)
   quote_request_form     Boolean  @default(true)
   booking_or_whatsapp    String   @default("none")
+  primary_language        String   @default("english")
+  additional_languages    String?  @default("")
 
   // Step 7 — Add-ons & Final Details
   google_listing_option  Boolean  @default(false)
