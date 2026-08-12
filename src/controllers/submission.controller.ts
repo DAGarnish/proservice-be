@@ -132,7 +132,9 @@ export const createSubmission = async (req: Request, res: Response): Promise<voi
       preferred_colours: body.preferred_colours || '',
       selected_website_look: body.selected_website_look || 'professional-blue',
       match_logo_colours: Boolean(body.match_logo_colours),
-      logo_uploaded: Boolean(body.logo_uploaded),
+      // Derived from actual image data rather than trusted client boolean — a client
+      // could send logo_uploaded:true with no logo_data_url (e.g. a stale form default).
+      logo_uploaded: Boolean(body.logo_data_url),
       logo_data_url: body.logo_data_url || '',
       logo_prompt: body.logo_prompt || '',
       photos_uploaded: Boolean(
@@ -201,7 +203,7 @@ export const createSubmission = async (req: Request, res: Response): Promise<voi
  */
 export const queueGeneration = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { submissionId, previewId, userId } = req.body;
+    const { submissionId, previewId, userId, skipEmail, force } = req.body;
 
     let targetSubmissionId = submissionId;
 
@@ -235,7 +237,29 @@ export const queueGeneration = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    const queued = await queueService.push(targetSubmissionId);
+    // Real (non-admin) generation requests must belong to a verified user — this is
+    // the server-side enforcement of the same rule the recovery cron already applies,
+    // so unverified callers can't trigger paid AI generation no matter which client
+    // calls this endpoint. Admin-triggered requests (skipEmail: true) are exempt,
+    // since an admin may intentionally want to force-build a site regardless.
+    if (!skipEmail) {
+      const submissionForCheck = await withPrismaRetry(() =>
+        prisma.websiteSubmission.findUnique({
+          where: { id: targetSubmissionId },
+          select: { user: { select: { isEmailVerified: true } } },
+        })
+      );
+
+      if (!submissionForCheck?.user?.isEmailVerified) {
+        res.status(403).json({
+          success: false,
+          error: 'This account has not verified its email yet. Verify your email before generating a website.',
+        });
+        return;
+      }
+    }
+
+    const queued = await queueService.push(targetSubmissionId, { skipEmail: Boolean(skipEmail), force: Boolean(force) });
 
     res.status(200).json({
       success: true,
@@ -268,7 +292,8 @@ export const getQueueStatus = async (req: Request, res: Response): Promise<void>
  */
 export const triggerCronRecovery = async (req: Request, res: Response): Promise<void> => {
   try {
-    const queuedCount = await runRecoveryScanNow();
+    const skipEmail = Boolean(req.body?.skipEmail);
+    const queuedCount = await runRecoveryScanNow(skipEmail);
     res.status(200).json({
       success: true,
       message: `Manual recovery scan executed. Queued ${queuedCount} unbuilt/failed submissions.`,

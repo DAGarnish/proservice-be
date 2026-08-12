@@ -18,8 +18,10 @@ export function startRecoveryCronJob(): void {
 
 /**
  * Manually or automatically runs the check to find unbuilt sites and pushes them into the queue.
+ * `skipEmail` suppresses the welcome preview email for this batch (used when an admin manually
+ * triggers recovery from the dashboard, as opposed to the automatic 10-minute cron tick).
  */
-export async function runRecoveryScanNow(): Promise<number> {
+export async function runRecoveryScanNow(skipEmail: boolean = false): Promise<number> {
   try {
     const unbuiltSubmissions: any[] = await withPrismaRetry(() =>
       prisma.websiteSubmission.findMany({
@@ -54,7 +56,7 @@ export async function runRecoveryScanNow(): Promise<number> {
     let addedCount = 0;
     for (const sub of unbuiltSubmissions) {
       // Push each submission into the queue
-      const added = await queueService.push(sub.id);
+      const added = await queueService.push(sub.id, { skipEmail });
       if (added) addedCount++;
     }
 

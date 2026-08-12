@@ -14,14 +14,26 @@ class GenerationQueue {
   private activeSet: Set<string> = new Set();
   private concurrency: number = 1; // Process 1 site at a time to prevent Claude API 429 rate limit or server overload
   private maxTaskRetries: number = 3;
+  // Submissions queued with the welcome email suppressed (e.g. admin-triggered generation)
+  private skipEmailSet: Set<string> = new Set();
+  // Submissions queued to force a real rebuild even if valid generatedHtml already exists
+  // (admin "Regenerate" action) — bypasses the already-has-HTML short-circuit below.
+  private forceSet: Set<string> = new Set();
 
   /**
    * Pushes a submissionId into the generation queue if not already queued or processing.
    */
-  public async push(submissionId: string): Promise<boolean> {
+  public async push(submissionId: string, options?: { skipEmail?: boolean; force?: boolean }): Promise<boolean> {
     if (this.activeSet.has(submissionId) || this.queue.includes(submissionId)) {
       console.log(`[QUEUE] Submission ${submissionId} is already in the queue or actively processing.`);
       return false;
+    }
+
+    if (options?.skipEmail) {
+      this.skipEmailSet.add(submissionId);
+    }
+    if (options?.force) {
+      this.forceSet.add(submissionId);
     }
 
     // Ensure status is marked pending if not already processing
@@ -90,6 +102,12 @@ class GenerationQueue {
   }
 
   private async processSubmission(submissionId: string): Promise<void> {
+    // Consume the skip-email and force flags up front so they never leak across retries/re-queues.
+    const skipEmail = this.skipEmailSet.has(submissionId);
+    this.skipEmailSet.delete(submissionId);
+    const force = this.forceSet.has(submissionId);
+    this.forceSet.delete(submissionId);
+
     const submission: any = await withPrismaRetry(() =>
       prisma.websiteSubmission.findUnique({
         where: { id: submissionId },
@@ -102,8 +120,9 @@ class GenerationQueue {
       return;
     }
 
-    // Check if HTML is already generated and valid
-    if (submission.generatedHtml && typeof submission.generatedHtml === 'string' && submission.generatedHtml.trim().startsWith('<')) {
+    // Check if HTML is already generated and valid — skip the real rebuild below unless
+    // `force` was requested (admin "Regenerate" action explicitly wants a fresh build).
+    if (!force && submission.generatedHtml && typeof submission.generatedHtml === 'string' && submission.generatedHtml.trim().startsWith('<')) {
       console.log(`[QUEUE] Submission ${submissionId} already has valid generated HTML.`);
       if (submission.status !== 'completed') {
         await withPrismaRetry(() =>
@@ -114,6 +133,10 @@ class GenerationQueue {
         );
       }
       return;
+    }
+
+    if (force) {
+      console.log(`[QUEUE] Force-regenerating ${submissionId}, overwriting existing HTML.`);
     }
 
     // Mark as processing
@@ -196,7 +219,10 @@ class GenerationQueue {
       console.log(`[QUEUE] Successfully generated and saved AI HTML for ${submission.business_name || submissionId}`);
 
       // SEND WELCOME PREVIEW EMAIL ONLY AFTER WEBSITE IS GENERATED AND SAVED
-      if (submission.user && submission.user.email && submission.user.isEmailVerified) {
+      // (skipped when an admin manually triggered this generation from the dashboard)
+      if (skipEmail) {
+        console.log(`[QUEUE] Skipping welcome email for ${submissionId} (admin-triggered generation).`);
+      } else if (submission.user && submission.user.email && submission.user.isEmailVerified) {
         try {
           console.log(`[QUEUE] Sending welcome preview email to ${submission.user.email}...`);
           await sendWelcomePreviewEmail(

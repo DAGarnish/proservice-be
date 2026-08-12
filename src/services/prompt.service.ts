@@ -40,7 +40,9 @@ export function buildWebsiteBrief(data: FormData | Partial<FormData> | any): Web
     style_preference: Array.isArray(data.style_preference) ? data.style_preference : [],
     preferred_colours: data.preferred_colours || '',
     selected_website_look: data.selected_website_look || 'professional-blue',
-    has_logo: Boolean(data.logo_uploaded),
+    // Derived from actual logo data rather than the (unreliable) logo_uploaded flag,
+    // so the prompt never claims "Has logo: Yes" with no image to actually embed.
+    has_logo: Boolean(data.logo_data_url),
     logo_data_url: data.logo_data_url || '',
     has_photos: Boolean(data.photos_uploaded || (data.uploaded_photos_urls && data.uploaded_photos_urls.length > 0) || (data.secondary_photos_urls && data.secondary_photos_urls.length > 0)),
     uploaded_photos_urls: [
