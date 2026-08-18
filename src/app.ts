@@ -31,8 +31,10 @@ app.use(
 app.use(morgan('dev'));
 
 // Body Parsing Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Default Express limit is 100kb, which is too small for submissions that
+// carry embedded base64 image data (logo/hero/gallery photos).
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
 // API Routes
 app.use('/api/v1', routes);
