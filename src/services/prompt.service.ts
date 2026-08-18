@@ -19,7 +19,11 @@ const LOOK_LABELS: Record<string, string> = {
   'bold-strong': 'Bold Strong — confident, urgent, emergency trades',
 };
 
-function sanitizeLogoDataUrl(logoDataUrl: string | undefined, businessName: string | undefined): string {
+// Shared by buildWebsiteBrief (the AI prompt) and queue.service's post-generation
+// HTML safeguard step (enhanceGeneratedHtml) — both consume these same fields
+// off the submission record, so both need the same guard against a failed
+// upload's embedded base64 blowing things up.
+export function sanitizeLogoDataUrl(logoDataUrl: string | null | undefined, businessName?: string | null): string {
   if (!logoDataUrl) return '';
   if (logoDataUrl.length > MAX_LOGO_DATA_URL_LENGTH) {
     console.warn(
@@ -28,6 +32,21 @@ function sanitizeLogoDataUrl(logoDataUrl: string | undefined, businessName: stri
     return '';
   }
   return logoDataUrl;
+}
+
+export function sanitizePhotoUrls(urls: (string | null | undefined)[] | null | undefined, businessName?: string | null): string[] {
+  return (urls || [])
+    .filter((url): url is string => Boolean(url))
+    .filter((url, index, self) => self.indexOf(url) === index)
+    .filter((url) => {
+      if (url.length > MAX_PHOTO_URL_LENGTH) {
+        console.warn(
+          `[PROMPT] Dropping oversized photo URL (${url.length} chars) for "${businessName}" — likely a failed Supabase upload that fell back to embedded base64.`
+        );
+        return false;
+      }
+      return true;
+    });
 }
 
 export function buildWebsiteBrief(data: FormData | Partial<FormData> | any): WebsiteBrief {
@@ -63,20 +82,13 @@ export function buildWebsiteBrief(data: FormData | Partial<FormData> | any): Web
     has_logo: Boolean(sanitizeLogoDataUrl(data.logo_data_url, data.business_name)),
     logo_data_url: sanitizeLogoDataUrl(data.logo_data_url, data.business_name),
     has_photos: Boolean(data.photos_uploaded || (data.uploaded_photos_urls && data.uploaded_photos_urls.length > 0) || (data.secondary_photos_urls && data.secondary_photos_urls.length > 0)),
-    uploaded_photos_urls: [
-      ...(Array.isArray(data.uploaded_photos_urls) ? data.uploaded_photos_urls : []),
-      ...(Array.isArray(data.secondary_photos_urls) ? data.secondary_photos_urls : [])
-    ]
-      .filter((url, index, self) => url && self.indexOf(url) === index)
-      .filter((url) => {
-        if (url.length > MAX_PHOTO_URL_LENGTH) {
-          console.warn(
-            `[PROMPT] Dropping oversized photo URL (${url.length} chars) for "${data.business_name}" — likely a failed Supabase upload that fell back to embedded base64.`
-          );
-          return false;
-        }
-        return true;
-      }),
+    uploaded_photos_urls: sanitizePhotoUrls(
+      [
+        ...(Array.isArray(data.uploaded_photos_urls) ? data.uploaded_photos_urls : []),
+        ...(Array.isArray(data.secondary_photos_urls) ? data.secondary_photos_urls : [])
+      ],
+      data.business_name
+    ),
     example_websites: data.example_websites || '',
     avoid_on_site: data.avoid_on_site || '',
     seo_locations: [data.main_city, data.full_service_area, data.priority_locations]

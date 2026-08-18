@@ -4,7 +4,7 @@
 // ONLY send the welcome preview email AFTER successful AI generation completes (no fallback templates).
 
 import { prisma, withPrismaRetry } from '../config/prisma';
-import { buildWebsiteBrief } from './prompt.service';
+import { buildWebsiteBrief, sanitizeLogoDataUrl, sanitizePhotoUrls } from './prompt.service';
 import { generateWebsiteWithClaude, generateLogoWithClaude } from './claude.service';
 import { enhanceGeneratedHtml } from './htmlSafeguard.service';
 import { sendWelcomePreviewEmail } from './email.service';
@@ -196,12 +196,15 @@ class GenerationQueue {
 
     // Step 4: Handle Outcome (No fallback templates! Only send email on real success)
     if (isGenerationSuccess && generatedHtml) {
-      // Enhance HTML (responsive header, anti-crop photo framing, interactive maps)
+      // Enhance HTML (responsive header, anti-crop photo framing, interactive maps).
+      // Sanitize here too — a failed upload's embedded base64 must not get spliced
+      // straight into the final page (it already gets filtered out of the AI prompt
+      // in buildWebsiteBrief, but this step reads the raw submission fields again).
       generatedHtml = enhanceGeneratedHtml(
         generatedHtml,
-        finalLogoUrl,
+        sanitizeLogoDataUrl(finalLogoUrl, submission.business_name),
         submission.business_name,
-        Array.isArray(submission.uploaded_photos_urls) ? submission.uploaded_photos_urls : [],
+        sanitizePhotoUrls(submission.uploaded_photos_urls, submission.business_name),
         submission.business_address || submission.main_city || submission.service_area || 'USA'
       );
 
