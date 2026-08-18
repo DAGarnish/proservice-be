@@ -3,6 +3,13 @@
 
 import { FormData, StructuredBrief, WebsiteBrief } from '../types/form';
 
+// Real Supabase Storage URLs are ~100-150 chars. Anything far longer is a
+// failed upload that fell back to an embedded base64 data: URL — left
+// unguarded, one bad upload can balloon the generation prompt past Claude's
+// context window and permanently fail the whole submission.
+const MAX_PHOTO_URL_LENGTH = 500;
+const MAX_LOGO_DATA_URL_LENGTH = 100_000;
+
 const LOOK_LABELS: Record<string, string> = {
   'professional-blue': 'Professional Blue — trustworthy, established, trades/consultants',
   'local-green': 'Local Green — reliable, practical, eco-friendly, home services',
@@ -11,6 +18,17 @@ const LOOK_LABELS: Record<string, string> = {
   'clean-minimal': 'Clean Minimal — modern, understated, neutral professional',
   'bold-strong': 'Bold Strong — confident, urgent, emergency trades',
 };
+
+function sanitizeLogoDataUrl(logoDataUrl: string | undefined, businessName: string | undefined): string {
+  if (!logoDataUrl) return '';
+  if (logoDataUrl.length > MAX_LOGO_DATA_URL_LENGTH) {
+    console.warn(
+      `[PROMPT] Dropping oversized logo data URL (${logoDataUrl.length} chars) for "${businessName}" — likely a failed Supabase upload that fell back to embedded base64.`
+    );
+    return '';
+  }
+  return logoDataUrl;
+}
 
 export function buildWebsiteBrief(data: FormData | Partial<FormData> | any): WebsiteBrief {
   const structured: StructuredBrief = {
@@ -42,13 +60,23 @@ export function buildWebsiteBrief(data: FormData | Partial<FormData> | any): Web
     selected_website_look: data.selected_website_look || 'professional-blue',
     // Derived from actual logo data rather than the (unreliable) logo_uploaded flag,
     // so the prompt never claims "Has logo: Yes" with no image to actually embed.
-    has_logo: Boolean(data.logo_data_url),
-    logo_data_url: data.logo_data_url || '',
+    has_logo: Boolean(sanitizeLogoDataUrl(data.logo_data_url, data.business_name)),
+    logo_data_url: sanitizeLogoDataUrl(data.logo_data_url, data.business_name),
     has_photos: Boolean(data.photos_uploaded || (data.uploaded_photos_urls && data.uploaded_photos_urls.length > 0) || (data.secondary_photos_urls && data.secondary_photos_urls.length > 0)),
     uploaded_photos_urls: [
       ...(Array.isArray(data.uploaded_photos_urls) ? data.uploaded_photos_urls : []),
       ...(Array.isArray(data.secondary_photos_urls) ? data.secondary_photos_urls : [])
-    ].filter((url, index, self) => url && self.indexOf(url) === index),
+    ]
+      .filter((url, index, self) => url && self.indexOf(url) === index)
+      .filter((url) => {
+        if (url.length > MAX_PHOTO_URL_LENGTH) {
+          console.warn(
+            `[PROMPT] Dropping oversized photo URL (${url.length} chars) for "${data.business_name}" — likely a failed Supabase upload that fell back to embedded base64.`
+          );
+          return false;
+        }
+        return true;
+      }),
     example_websites: data.example_websites || '',
     avoid_on_site: data.avoid_on_site || '',
     seo_locations: [data.main_city, data.full_service_area, data.priority_locations]
@@ -123,7 +151,8 @@ function generateNaturalLanguageBrief(s: StructuredBrief): string {
   if (s.logo_data_url) lines.push(`Logo Data URL: ${s.logo_data_url}\nINSTRUCTION: The user provided their logo image as a base64 Data URL. You MUST include an <img src="${s.logo_data_url}" alt="${s.business_name} Logo" class="logo" style="max-height: 48px; width: auto; object-fit: contain;"> tag inside the header navbar and footer of the generated HTML website!`);
   lines.push(`Has photos: ${s.has_photos ? 'Yes' : 'No — use professional stock images relevant to ' + s.occupation}`);
   if (Array.isArray(s.uploaded_photos_urls) && s.uploaded_photos_urls.length > 0) {
-    lines.push(`Uploaded Photo URLs: ${s.uploaded_photos_urls.join(', ')}\nINSTRUCTION: The user uploaded ${s.uploaded_photos_urls.length} real business photos hosted on Supabase Storage. You MUST use the FIRST photo (${s.uploaded_photos_urls[0]}) prominently as the top Hero Section background banner image (<img src="${s.uploaded_photos_urls[0]}" class="hero-bg">). You MUST ALSO display ALL uploaded photos (${s.uploaded_photos_urls.join(', ')}) inside a dedicated, responsive "Our Work & Portfolio Gallery" section with card hover effects and across service/about cards to create an authentic, beautiful website!`);
+    const photoUrlsList = s.uploaded_photos_urls.join(', ');
+    lines.push(`Uploaded Photo URLs: ${photoUrlsList}\nINSTRUCTION: The user uploaded ${s.uploaded_photos_urls.length} real business photos hosted on Supabase Storage. You MUST use the FIRST photo (${s.uploaded_photos_urls[0]}) prominently as the top Hero Section background banner image (<img src="${s.uploaded_photos_urls[0]}" class="hero-bg">). You MUST ALSO display ALL uploaded photos (${photoUrlsList}) inside a dedicated, responsive "Our Work & Portfolio Gallery" section with card hover effects and across service/about cards to create an authentic, beautiful website!`);
   }
   if (s.example_websites) lines.push(`Reference websites: ${s.example_websites}`);
   if (s.avoid_on_site) lines.push(`Do NOT include: ${s.avoid_on_site}\n`);
